@@ -1,0 +1,56 @@
+name: Build and publish the Drive Wheel
+
+# nflverse rebuilds play-by-play nightly after each game day, with extra passes during game
+# days, and the NFL folds in stat corrections Monday through Wednesday. So the useful times
+# to rebuild are: after each slate of games, and once on Thursday for the corrections.
+# Times are UTC. US Eastern is UTC-5 in winter, UTC-4 in early autumn, so these are set a
+# little late to stay correct on both sides of the November clock change.
+on:
+  schedule:
+    - cron: '0 8,14 * * 1'     # Monday: after Sunday's afternoon, evening and night games
+    - cron: '0 8,14 * * 2'     # Tuesday: after Monday Night Football
+    - cron: '0 10 * * 4'       # Thursday: NFL stat corrections from Mon-Wed have landed
+    - cron: '0 8 * * 5'        # Friday: after Thursday Night Football
+    - cron: '0 8 * * 0'        # Sunday: after any Saturday games (December and January)
+  workflow_dispatch:            # a Run workflow button, for anything off-schedule
+  push:
+    branches: [main]            # and whenever you change the code
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pandas
+      - name: Pull nflverse data and build
+        run: |
+          curl -fsSL -o teams.csv https://github.com/nflverse/nflverse-data/releases/download/teams/teams_colors_logos.csv
+          for yr in 2025 2026; do
+            if curl -fsSL -o pbp_$yr.csv.gz https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_$yr.csv.gz; then
+              python build_data.py pbp_$yr.csv.gz teams.csv data$yr.json
+            fi
+          done
+          python build_nfl.py site
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
