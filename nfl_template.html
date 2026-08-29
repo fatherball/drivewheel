@@ -31,7 +31,18 @@ select#season{font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;color:
 .share{margin-left:auto;display:flex;gap:6px;align-items:center}
 .share .lbl{font-family:var(--mono);font-size:.72rem;letter-spacing:.18em;color:var(--chalk-dim);margin-right:2px}
 .wrap{max-width:1900px;margin:0 auto;padding:8px 14px 0}
-.card{background:var(--paper);border-radius:3px;padding:6px 6px 2px;margin-bottom:22px}
+.card{background:var(--paper);border-radius:3px;padding:6px 6px 2px;margin-bottom:22px;position:relative}
+.hud{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:flex-start;gap:20px;padding:12px 16px 0;pointer-events:none}
+.hud .meta{font-family:var(--display);color:#26241F}
+.hud .meta .wk{font-size:1.32rem;font-weight:600;letter-spacing:.06em;line-height:1.2}
+.hud .meta .stad{font-size:1.08rem;font-weight:400;color:#4A4741;line-height:1.3}
+.hud table{border-collapse:collapse;font-family:var(--mono);font-size:1.02rem}
+.hud td{padding:0 0 6px 22px;text-align:right;white-space:nowrap;line-height:1.2}
+.hud td.tm{padding-left:0;text-align:left;font-family:var(--display);font-size:1.38rem;font-weight:600;letter-spacing:.04em}
+.hud td.sc{font-size:1.55rem;font-weight:600}
+@media (max-width:820px){
+  .hud{position:static;flex-wrap:wrap;padding:10px 12px 4px}
+}
 .fit{margin:0 auto}
 .fit svg{width:100%;height:auto;display:block}
 .wedge{cursor:pointer;transition:fill-opacity .12s}
@@ -66,9 +77,9 @@ select#season{font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;color:
   </div>
 </div></div>
 <div class="wrap">
-  <div class="card"><div class="fit" id="fit"><div class="loading">Loading season data…</div></div></div>
+  <div class="card"><div class="hud" id="hud"></div><div class="fit" id="fit"><div class="loading">Loading season data…</div></div></div>
 </div>
-<div class="foot"><a href="https://drivewheel.football" class="how">How to read the Drive Wheel</a><span>Data: nflverse</span><span class="rights">© 2026 Eric Mineart</span></div>
+<div class="foot"><a href="https://drivewheel.football" class="how">How to read the Drive Wheel</a><span>Data: <a href="https://github.com/nflverse/nflverse-data" class="how">nflverse</a></span><span class="rights">© 2026 Eric Mineart</span></div>
 </div>
 <div class="tip" id="tip"></div>
 <div class="toast" id="toast"></div>
@@ -118,38 +129,74 @@ select#season{font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;color:
     }
     return c;
   }
+  function toHsl(hex) {
+    const r = parseInt(hex.slice(1, 3), 16) / 255, g = parseInt(hex.slice(3, 5), 16) / 255, b = parseInt(hex.slice(5, 7), 16) / 255;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2;
+    if (mx === mn) return [0, 0, l];
+    const dd = mx - mn, sat = l > 0.5 ? dd / (2 - mx - mn) : dd / (mx + mn);
+    let h = mx === r ? (g - b) / dd + (g < b ? 6 : 0) : mx === g ? (b - r) / dd + 2 : (r - g) / dd + 4;
+    return [h / 6, sat, l];
+  }
+  function fromHsl(h, s, l) {
+    if (!s) { const v = Math.round(l * 255).toString(16).padStart(2, '0'); return ('#' + v + v + v).toUpperCase(); }
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q;
+    const hue = t => { t = (t + 1) % 1; return t < 1/6 ? p + (q - p) * 6 * t : t < 1/2 ? q : t < 2/3 ? p + (q - p) * (2/3 - t) * 6 : p; };
+    const to = v => Math.round(v * 255).toString(16).padStart(2, '0');
+    return ('#' + to(hue(h + 1/3)) + to(hue(h)) + to(hue(h - 1/3))).toUpperCase();
+  }
+  // Very dark team colors read as mud on paper. Lift lightness a little, keep the hue.
+  // Neutrals are left alone: black is a signature, not a muddy red.
+  function punch(hex) {
+    const [h, s, l] = toHsl(hex);
+    if (s <= 0.18 || l >= 0.24) return hex.toUpperCase();
+    return fromHsl(h, Math.min(1, s * 1.06), 0.26);
+  }
+  const OVERRIDES = {};                                          // e.g. 'PHI@DAL': { home: '#B0B7BC', away: '#004C54' }
   function pickColors(home, away) {
-    const cs = t => (TEAMS[t] ? TEAMS[t].colors : ['#333333']).map(c => c.toUpperCase());
-    // a color qualifies when it reads as a color on paper; bright team yellows get extra leeway
-    const vivid = c => { const L = lab(c)[0], C = chroma(c); return C >= 14 && L >= 7 && (L <= 76 || (C >= 40 && L <= 88)); };
-    const H = cs(home), A = cs(away);
-    if (vivid(H[0]) && vivid(A[0]) && dE(H[0], A[0]) >= 55) return { home: H[0], away: A[0], swapped: [] };
+    const fixed = OVERRIDES[`${home}@${away}`];
+    if (fixed) return { home: fixed.home, away: fixed.away, swapped: [] };
+    const usable = t => {
+      const out = [];
+      (TEAMS[t] ? TEAMS[t].colors : ['#333333']).forEach((raw, i) => {
+        const c = raw.toUpperCase();
+        if (lab(c)[0] > 82) return;                              // too pale for paper
+        const p = punch(c);
+        if (!out.some(o => o.c === p)) out.push({ c: p, i, neutral: chroma(c) < 14 });
+      });
+      return out.length ? out : [{ c: '#333333', i: 0, neutral: true }];
+    };
+    const H = usable(home), A = usable(away);
     let best = null;
-    for (const h of H.filter(vivid)) for (const a of A.filter(vivid)) {
-      const d = dE(h, a); if (d < 42) continue;
-      const score = d + 0.25 * (chroma(h) + chroma(a)) + (h === H[0] ? 15 : 0) + (a === A[0] ? 15 : 0)
-        - (lab(h)[0] < 18 ? 10 : 0) - (lab(a)[0] < 18 ? 10 : 0);
-      if (!best || score > best.score) best = { score, home: h, away: a };
+    for (const h of H) for (const a of A) {
+      if (h.neutral && a.neutral) continue;                      // two neutrals never read as two teams
+      const d = dE(h.c, a.c);
+      if (d < 56) continue;
+      const lh = lab(h.c), la = lab(a.c);
+      let hueGap = Math.abs(Math.atan2(lh[2], lh[1]) - Math.atan2(la[2], la[1])) * 57.2958;
+      if (hueGap > 180) hueGap = 360 - hueGap;
+      // Lab distance alone lets two dark blues through; demand a real lightness or hue difference
+      if (!h.neutral && !a.neutral && Math.abs(lh[0] - la[0]) < 22 && hueGap < 60) continue;
+      let score = Math.min(d, 95) + 0.15 * (chroma(h.c) + chroma(a.c));
+      if (h.i === 0) score += 48;                                // the home team keeps its primary where it can
+      if (a.i === 0) score += 32;
+      if (h.neutral && h.i === 0) score += 22;                    // signature black counts double
+      if (a.neutral && a.i === 0) score += 22;
+      if (!best || score > best.score) best = { score, home: h.c, away: a.c, hi: h.i, ai: a.i };
     }
-    if (!best) {                                                 // greys and blacks as a last resort; the home team keeps its primary when possible
-      const ok = c => lab(c)[0] <= 74 || vivid(c);
-      for (const h of H.filter(ok)) for (const a of A.filter(ok)) {
-        const d = dE(h, a); if (d < 42) continue;
-        const score = d + (h === H[0] ? 40 : 0) + (a === A[0] ? 12 : 0) + 0.15 * (chroma(h) + chroma(a));
-        if (!best || score > best.score) best = { score, home: h, away: a };
+    if (!best) {                                                 // nothing clears the bar: most distant pair wins
+      for (const h of H) for (const a of A) {
+        const d = dE(h.c, a.c);
+        if (!best || d > best.score) best = { score: d, home: h.c, away: a.c, hi: h.i, ai: a.i };
       }
     }
-    if (!best) {                                                 // nothing clears the bar: take the most distant pair there is
-      for (const h of H) for (const a of A) { const d = dE(h, a); if (!best || d > best.score) best = { score: d, home: h, away: a }; }
-    }
     const swapped = [];
-    if (best.home !== H[0]) swapped.push(home);
-    if (best.away !== A[0]) swapped.push(away);
+    if (best.hi !== 0) swapped.push(home);
+    if (best.ai !== 0) swapped.push(away);
     return { home: best.home, away: best.away, swapped };
   }
 
   // ---------- geometry (Drive Wheel proportions) ----------
-  const W = 1080, CX = 540, R_IN = 0, R_OUT = 392;
+  const W = 1140, CX = 570, R_IN = 0, R_OUT = 392;
   let CY = 560;
   const R_TICK = R_OUT + 5, R_TMIN = R_OUT + 14, R_TMAJ = R_OUT + 22, R_LEAD = R_OUT + 33, R_ARC = R_OUT + 46, R_LABEL = R_OUT + 58;
   const INK = '#2B323C', PAPER = '#FBFAF6', FLAG = '#D9A200', LBL = '#3F3D38';
@@ -218,27 +265,17 @@ select#season{font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;color:
       if (L.angle < 12 || L.angle > 348) topNear = Math.max(topNear, L.r0 + L.len);
       if (L.angle > 168 && L.angle < 192) botNear = Math.max(botNear, L.r0 + L.len);
     });
-    CY = Math.max(560, topReach + 46);
-    const kY = CY - Math.max(topNear + 24, R_LABEL + 6);         // KICKOFF hugs the wheel; the leader stays short
+    // The corner blocks live in HTML over the canvas corners, which the circle leaves empty,
+    // so the wheel no longer has to make vertical room for them.
+    const kickReserve = Math.max(topNear + 26, R_LABEL + 40);    // KICKOFF never crowds the rim
+    CY = Math.max(topReach + 14, kickReserve + 34);
+    const kY = CY - kickReserve;
     const halfY = CY + Math.max(botReach, botNear + 12) + 26;
     const wheelH = halfY + 14;
 
     const o = [], w = s => o.push(s);
     w(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${wheelH}">`);
     w(`<rect x="0" y="0" width="${W}" height="${wheelH}" fill="${PAPER}"/>`);
-
-    // Meta at the left; one team table at the right holding score, possession and drive count.
-    // The initials are set in each team's own color, so the table is also the wheel's legend.
-    const wkName = game.st === 'REG' ? 'WEEK ' + game.wk : ({19:'WILD CARD',20:'DIVISIONAL',21:'CONFERENCE',22:'SUPER BOWL'}[game.wk] || 'PLAYOFFS');
-    w(`<text x="10" y="34" font-family="${FONT_D}" font-size="21" font-weight="600" letter-spacing="1.2" fill="#26241F">${wkName} · ${fmtDate(game.date).toUpperCase()}</text>`);
-    if (game.stad) w(`<text x="10" y="57" font-family="${FONT_D}" font-size="18" font-weight="400" letter-spacing="0.2" fill="#4A4741">${esc(game.stad)}</text>`);
-    [[away, game.as_], [home, game.hs]].forEach(([t, sc], i) => {
-      const p = game.top && game.top[t] ? game.top[t] : { s: 0, n: 0 }, y = 44 + i * 40, c = C[t];
-      w(`<text x="700" y="${y}" font-family="${FONT_D}" font-size="27" font-weight="600" letter-spacing="0.6" fill="${c}">${t}</text>`);
-      w(`<text x="836" y="${y}" text-anchor="end" font-family="${FONT_M}" font-size="30" font-weight="600" fill="${c}">${sc}</text>`);
-      w(`<text x="958" y="${y}" text-anchor="end" font-family="${FONT_M}" font-size="17" fill="${c}">${mmss(p.s)}</text>`);
-      w(`<text x="${W - 10}" y="${y}" text-anchor="end" font-family="${FONT_M}" font-size="17" fill="${c}">${p.n} drives</text>`);
-    });
 
     // kickoff / halftime: set in the display face at full width, with the kicking team named
     w(`<text x="${CX}" y="${kY}" text-anchor="middle" font-family="${FONT_D}" font-size="21" font-weight="600" letter-spacing="1.6" fill="${MUTE}">KICKOFF</text>`);
@@ -319,12 +356,10 @@ select#season{font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;color:
           const [rx, ry] = P(end[0], 0.02);
           w(`<line x1="${f1(ex)}" y1="${f1(ey)}" x2="${f1(rx)}" y2="${f1(ry)}" stroke="${oc}" stroke-width="2" stroke-dasharray="5 4"/>`);
         } else {
-          const [rx, ry] = P(end[0], d.tov.fa), [mx, my] = P(end[0], 1 - d.tov.fa);
+          // Only the runback itself, exactly as far as it went. (It used to carry on to the
+          // new offense's own starting spot, which made every return look far longer than it was.)
+          const [rx, ry] = P(end[0], d.tov.fa);
           if (d.tov.fa < d.tov.fi) w(`<line x1="${f1(ex)}" y1="${f1(ey)}" x2="${f1(rx)}" y2="${f1(ry)}" stroke="${oc}" stroke-width="1.8" stroke-dasharray="5 4"/>`);
-          if (!straight) {                                       // on the wheel the new offense sees the spot mirrored across the 50
-            w(`<line x1="${f1(rx)}" y1="${f1(ry)}" x2="${f1(mx)}" y2="${f1(my)}" stroke="${oc}" stroke-width="1.2" stroke-dasharray="3 3"/>`);
-            w(`<circle cx="${f1(mx)}" cy="${f1(my)}" r="2.8" fill="${oc}"/>`);
-          }
         }
       }
     };
@@ -392,7 +427,15 @@ select#season{font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;color:
     w('</svg>');
 
     fit.innerHTML = wheelSvg + o.join('\n');
-    fit.style.maxWidth = `calc((100vh - 68px) * ${(W / wheelH * 1.12).toFixed(4)})`;   // the whole ring fits the viewport; charts scroll
+    fit.style.maxWidth = `calc((100vh - 68px) * ${(W / wheelH * 1.34).toFixed(4)})`;   // the whole ring fits the viewport; charts scroll
+    const wkName = game.st === 'REG' ? 'Week ' + game.wk : ({19:'Wild card',20:'Divisional',21:'Conference',22:'Super Bowl'}[game.wk] || 'Playoffs');
+    const row = (t, sc) => { const p = game.top && game.top[t] ? game.top[t] : { s: 0, n: 0 };
+      return `<tr style="color:${C[t]}"><td class="tm">${t}</td><td class="sc">${sc}</td><td>${mmss(p.s)}</td><td>${p.n} drives</td></tr>`; };
+    document.getElementById('hud').innerHTML =
+      `<div class="meta"><div class="wk">${esc(wkName)} · ${fmtDate(game.date).toUpperCase()}</div>` +
+      (game.stad ? `<div class="stad">${esc(game.stad)}</div>` : '') + '</div>' +
+      `<table>${row(away, game.as_)}${row(home, game.hs)}</table>`;
+
     current = { game, C };
     wire();
   }
