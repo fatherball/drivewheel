@@ -28,6 +28,11 @@ select#game{max-width:330px;text-overflow:ellipsis}
 select#season{font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;color:var(--chalk)}
 .btn{font-size:.8rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:9px 13px;border:1px solid var(--line-2);border-radius:2px;background:none;cursor:pointer;color:var(--chalk);white-space:nowrap}
 .btn:hover{border-color:var(--chalk-dim);background:var(--turf-2)}
+.zoom,.nav{display:flex;gap:4px;flex:none}
+.controls{display:contents}
+.menu{display:none;align-items:center;gap:8px}
+.menu .chev{transition:transform .15s;display:inline-block}
+.menu[aria-expanded="true"] .chev{transform:rotate(180deg)}
 .share{margin-left:auto;display:flex;gap:6px;align-items:center}
 .share .lbl{font-family:var(--mono);font-size:.72rem;letter-spacing:.18em;color:var(--chalk-dim);margin-right:2px}
 .wrap{max-width:1900px;margin:0 auto;padding:8px 14px 0}
@@ -41,7 +46,13 @@ select#season{font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;color:
 .hud td.tm{padding-left:0;text-align:left;font-family:var(--display);font-size:1.38rem;font-weight:600;letter-spacing:.04em}
 .hud td.sc{font-size:1.55rem;font-weight:600}
 @media (max-width:820px){
-  .hud{position:static;flex-wrap:wrap;padding:10px 12px 4px}
+  .hud{position:static;flex-wrap:wrap;gap:4px 14px;padding:8px 10px 2px}
+  .hud .meta .wk{font-size:.95rem;letter-spacing:.04em}
+  .hud .meta .stad{font-size:.85rem}
+  .hud table{font-size:.8rem}
+  .hud td{padding:0 0 2px 12px}
+  .hud td.tm{font-size:1rem}
+  .hud td.sc{font-size:1.05rem}
 }
 .fit{margin:0 auto}
 .fit svg{width:100%;height:auto;display:block}
@@ -59,18 +70,30 @@ select#season{font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;color:
 .foot .how{color:var(--chalk);text-decoration:none;border-bottom:1px solid var(--line-2);padding-bottom:2px}
 .foot .how:hover{border-bottom-color:var(--chalk-dim)}
 .loading{color:var(--chalk-faint);padding:60px 0;text-align:center;font-family:var(--mono)}
-@media (max-width:900px){ .share{margin-left:0} }
+@media (max-width:820px){
+  .mast-in{padding:8px 12px;gap:8px}
+  .menu{display:inline-flex;margin-left:auto}
+  .controls{display:none}
+  .controls.open{display:flex;flex-wrap:wrap;gap:8px;width:100%;padding-top:8px}
+  .controls.open select{flex:1 1 44%;min-width:0}
+  .controls.open .nav,.controls.open .zoom{flex:0 0 auto}
+  /* the share row reads better under the chart than competing with the picker */
+  .share{margin-left:0;width:100%;justify-content:flex-end;padding:0 2px 18px}
+}
 </style></head>
 <body>
 <div class="mast"><div class="mast-in">
   <span class="logo-txt">Drive Wheel</span>
-  <select id="season" title="Season"></select>
-  <select id="team" title="Team"></select>
-  <select id="week" title="Week"></select>
-  <select id="game" title="Game"></select>
-  <button class="btn" id="prev" title="Previous game">‹</button>
-  <button class="btn" id="next" title="Next game">›</button>
-  <div class="share">
+  <button class="btn menu" id="menu" aria-expanded="false" aria-controls="controls"><span id="menuLabel">Games</span> <span class="chev">▾</span></button>
+  <div class="controls" id="controls">
+    <select id="season" title="Season"></select>
+    <select id="team" title="Team"></select>
+    <select id="week" title="Week"></select>
+    <select id="game" title="Game"></select>
+    <span class="nav"><button class="btn" id="prev" title="Previous game">‹</button><button class="btn" id="next" title="Next game">›</button></span>
+    <span class="zoom"><button class="btn" id="zout" title="Smaller">−</button><button class="btn" id="zin" title="Larger">+</button></span>
+  </div>
+  <div class="share" id="share">
     <span class="lbl">SHARE</span>
     <button class="btn" id="shLink" title="Copy a link to this game">Link</button>
     <button class="btn" id="shX" title="Share on X">X</button>
@@ -245,6 +268,11 @@ select#season{font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;color:
 
   // ---------- render ----------
   const fit = document.getElementById('fit'), tip = document.getElementById('tip'), toast = document.getElementById('toast');
+  // Default fits the whole wheel in the viewport; the buttons let you push past that when you
+  // want to read the detail rather than take in the shape.
+  let zoom = 1, fitRatio = 1;
+  const applyZoom = () => { fit.style.maxWidth = `calc((100vh - 76px) * ${(fitRatio * zoom).toFixed(4)})`; };
+  const setZoom = z => { zoom = Math.max(0.7, Math.min(2.2, z)); applyZoom(); };
   let current = null;
 
   function render(game) {
@@ -317,6 +345,15 @@ select#season{font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;color:
         w(`<line x1="${f1(x0)}" y1="${f1(y0)}" x2="${f1(x1)}" y2="${f1(y1)}" stroke="#A9A69F" stroke-width="1.1"/>`);
       }
       w(`<g transform="translate(${CX},${CY}) rotate(${f1(flip ? L.angle + 90 : L.angle - 90)})"><text x="${flip ? -L.r0 : L.r0}" y="0" text-anchor="${flip ? 'end' : 'start'}" dominant-baseline="middle" font-family="${FONT_D}" font-size="${d.sb ? 26 : 22}" font-weight="${d.sb ? 600 : 500}" letter-spacing="0.3" fill="${d.sb ? C[d.sb] : LBL}">${esc(L.txt)}</text></g>`);
+    });
+
+    // A drive that began by taking the ball on the kickoff — a fumbled return or a recovered
+    // onside kick. Without this the wheel just shows two drives in a row for one team.
+    reg.forEach(d => {
+      if (!d.kr) return;
+      // sit a little way into the drive: the previous drive's try marker owns the boundary
+      const ang = Math.min(deg(d.a0) + 2.2, (deg(d.a0) + deg(d.a1)) / 2), flip = ang > 180;
+      w(`<g class="kick" data-i="${game.drives.indexOf(d)}" transform="translate(${CX},${CY}) rotate(${f1(flip ? ang + 90 : ang - 90)})"><text x="${flip ? -(R_OUT + 5) : R_OUT + 5}" y="0" text-anchor="${flip ? 'end' : 'start'}" dominant-baseline="middle" font-family="${FONT_D}" font-size="10" font-weight="600" letter-spacing="0.2" fill="${C[d.t]}" stroke="${PAPER}" stroke-width="2.4" paint-order="stroke">${d.kr.on ? 'ONSIDE' : 'REC'}</text></g>`);
     });
 
     // The try after a touchdown: XP or 2PT set radially in the tick gutter, in the scoring team's
@@ -427,7 +464,8 @@ select#season{font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;color:
     w('</svg>');
 
     fit.innerHTML = wheelSvg + o.join('\n');
-    fit.style.maxWidth = `calc((100vh - 68px) * ${(W / wheelH * 1.34).toFixed(4)})`;   // the whole ring fits the viewport; charts scroll
+    fitRatio = W / wheelH;
+    applyZoom();
     const wkName = game.st === 'REG' ? 'Week ' + game.wk : ({19:'Wild card',20:'Divisional',21:'Conference',22:'Super Bowl'}[game.wk] || 'Playoffs');
     const row = (t, sc) => { const p = game.top && game.top[t] ? game.top[t] : { s: 0, n: 0 };
       return `<tr style="color:${C[t]}"><td class="tm">${t}</td><td class="sc">${sc}</td><td>${mmss(p.s)}</td><td>${p.n} drives</td></tr>`; };
@@ -457,8 +495,15 @@ select#season{font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;color:
       const d = game.drives[+el.dataset.i], n = +el.dataset.i + 1;
       const html = `<b style="color:${onDark(C[d.t])}">${TEAMS[d.t] ? TEAMS[d.t].nick.toUpperCase() : d.t}</b> <span class="k">DRIVE ${n}</span><br>${d.n} play${d.n === 1 ? '' : 's'} · ${mmss(d.a1 - d.a0)} · ${d.y} yds<br><span class="k">${esc(d.r).toUpperCase()}</span>`;
       el.addEventListener('mousemove', ev => { if (!pinned) showTip(html, ev.clientX, ev.clientY); });
+      el.addEventListener('click', ev => { ev.stopPropagation(); pinned = true; showTip(html, ev.clientX, ev.clientY, true); });
       el.addEventListener('mouseenter', () => { el.setAttribute('fill-opacity', '0.24'); el.setAttribute('stroke', INK); });
       el.addEventListener('mouseleave', () => { el.setAttribute('fill-opacity', el.dataset.ot ? '0.11' : '0.13'); el.setAttribute('stroke', PAPER); if (!pinned) tip.classList.remove('on'); });
+    });
+    fit.querySelectorAll('.kick').forEach(el => {
+      const d = game.drives[+el.dataset.i];
+      const html = `<b style="color:${onDark(C[d.t])}">${d.t}</b> <span class="k">${d.kr.on ? 'ONSIDE KICK RECOVERED' : 'RECOVERED THE KICKOFF'}</span><br>${esc(d.kr.d || '')}`;
+      el.style.cursor = 'pointer';
+      el.addEventListener('click', ev => { ev.stopPropagation(); pinned = true; showTip(html, ev.clientX, ev.clientY, true); });
     });
     fit.querySelectorAll('.tov').forEach(el => {
       const d = game.drives[+el.dataset.i], p = d.q[d.q.length - 2] || d.q[d.q.length - 1];
@@ -545,6 +590,8 @@ select#season{font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;color:
   selWeek.addEventListener('change', () => { selWeek.dataset.want = selWeek.value; rebuild(); });
   selGame.addEventListener('change', () => show(GAMES.find(g => g.id === selGame.value)));
   const stepGame = dir => { const opts = Array.from(selGame.options); const i = opts.findIndex(x => x.value === cur.id) + dir; if (i >= 0 && i < opts.length) { selGame.value = opts[i].value; show(GAMES.find(g => g.id === opts[i].value)); } };
+  document.getElementById('zin').addEventListener('click', () => setZoom(zoom * 1.15));
+  document.getElementById('zout').addEventListener('click', () => setZoom(zoom / 1.15));
   document.getElementById('prev').addEventListener('click', () => stepGame(-1));
   document.getElementById('next').addEventListener('click', () => stepGame(1));
   window.addEventListener('hashchange', () => { const g = GAMES.find(x => x.id === location.hash.slice(1)); if (g && g !== cur) { selSeason.value = g.season; rebuildTeams(); selTeam.value = ''; selWeek.dataset.want = ''; cur = g; rebuild(); } });
@@ -557,6 +604,32 @@ select#season{font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;color:
     try { await navigator.clipboard.writeText(shareURL()); say('Link copied'); } catch (e) { say(shareURL()); }
   });
   document.getElementById('shX').addEventListener('click', () => window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(shareText()) + '&url=' + encodeURIComponent(shareURL()), '_blank'));
+
+  // ---------- mobile chrome ----------
+  // The picker is collapsed by default on a phone: it costs a lot of screen and the block
+  // above the wheel already names the game. The toggle carries the matchup so it reads as
+  // the game picker rather than a generic menu.
+  const menu = document.getElementById('menu'), controls = document.getElementById('controls'),
+        menuLabel = document.getElementById('menuLabel'), share = document.getElementById('share'),
+        card = document.querySelector('.card'), mastIn = document.querySelector('.mast-in');
+  menu.addEventListener('click', () => {
+    const open = controls.classList.toggle('open');
+    menu.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  const narrow = window.matchMedia('(max-width: 820px)');
+  function layoutChrome() {
+    if (narrow.matches) {
+      if (share.parentElement !== card.parentElement) card.parentElement.appendChild(share);
+    } else {
+      if (share.parentElement !== mastIn) mastIn.appendChild(share);
+      controls.classList.remove('open');
+      menu.setAttribute('aria-expanded', 'false');
+    }
+  }
+  narrow.addEventListener('change', layoutChrome);
+  layoutChrome();
+  window.setMenuLabel = g => { menuLabel.textContent = `${g.away} at ${g.home}`; };
+  window.setMenuLabel(cur);
 
   rebuildTeams(); rebuild();
 })();

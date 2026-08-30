@@ -51,8 +51,23 @@ def game_data(g):
         if teams.empty: continue
         team = teams.mode().iloc[0]
         opp = away if team == home else home
+        d_all = d                                                # keep the tries for the touchdown label
+        d = d[(d.two_point_attempt != 1) & (d.play_type != "extra_point")]   # a try belongs to the touchdown, not the drive
         plays = d[d.play_type.isin(SCRIMMAGE | ENDERS)]
+        if plays.empty:
+            koTD = d[(d.play_type == "kickoff") & (d.touchdown == 1) & d.td_team.notna()]
+            if not koTD.empty: plays = koTD
         if plays.empty: continue
+        kr = None
+        ko = d[d.kickoff_attempt == 1]
+        if not ko.empty:
+            krow = ko.iloc[0]
+            onside = "ONSIDE" in str(krow.desc).upper()
+            lost = bool(krow.fumble_lost == 1)
+            # nflfastR sometimes files the kickoff under the kicking team's drive, so posteam
+            # disagreeing is not enough on its own — require a fumble or a recovered onside kick.
+            if pd.notna(krow.posteam) and krow.posteam != team and (lost or onside):
+                kr = dict(d=clean_desc(krow.desc), on=onside)
         a0 = drive_start(d, ot_len)
         if a0 is None: continue
         nxt = None
@@ -70,7 +85,7 @@ def game_data(g):
 
         seq = []
         for _, p in d.iterrows():
-            if p.play_type not in SCRIMMAGE | ENDERS | {"no_play"}: continue
+            if p.play_type not in SCRIMMAGE | ENDERS | {"no_play"} and not (p.play_type == "kickoff" and p.touchdown == 1): continue
             if pd.isna(p.yardline_100) or pd.isna(p.game_seconds_remaining): continue
             is_pen = p.penalty == 1 and isinstance(p.penalty_team, str)
             if p.play_type == "no_play" and not is_pen: continue
@@ -93,8 +108,8 @@ def game_data(g):
         xtra = None
         if result == "Touchdown":
             end_frac, word, sb = 1.0, "TD", team
-            two = d[d.two_point_attempt == 1]
-            xp = d[d.extra_point_attempt == 1]
+            two = d_all[d_all.two_point_attempt == 1]
+            xp = d_all[d_all.extra_point_attempt == 1]
             if not two.empty:
                 row = two.iloc[-1]
                 xtra = dict(k="2PT", ok=bool(row.two_point_conv_result == "success"), d=clean_desc(row.desc))
@@ -127,12 +142,27 @@ def game_data(g):
                 end_frac = f_int
                 tov = dict(fi=round(f_int, 3), fa=round(f_after, 3), td=ret_td)
                 if ret_td: word, sb = ("Pick 6" if last.interception == 1 else "Fumble 6"), opp
+            elif result == "Opp touchdown" and isinstance(last.td_team, str) and last.td_team != team:
+                # A defensive score nflfastR tags as neither interception nor fumble: a blocked
+                # kick scooped up, or a punt run back. The drive belongs to the other team.
+                desc_up = str(last.desc).upper()
+                if last.play_type == "punt" and "BLOCKED" not in desc_up and pd.notna(last.kick_distance):
+                    land = last.yardline_100 - last.kick_distance          # returned all the way, so it ends at 0
+                    pr = dict(fl=round(max(0.0, min(1.0, (100 - land) / 100)), 3), fa=0.0,
+                              d=clean_desc(last.desc), td=True)
+                    word, sb = "Punt 6", opp
+                else:
+                    f_spot = (100 - last.yardline_100) / 100 if pd.notna(last.yardline_100) else 0.5
+                    f_spot = max(0.0, min(1.0, f_spot))
+                    end_frac = f_spot
+                    tov = dict(fi=round(f_spot, 3), fa=0.0, td=True)
+                    word, sb = ("Block 6" if "BLOCKED" in desc_up else "Def 6"), opp
             else: word = "Downs"
         else: word = result if isinstance(result, str) else ""
         end_frac = max(0.0, min(1.0, end_frac))
         seq.append([a1, round(end_frac, 3), "x", 0, 0, ""])
         n = sum(1 for r in seq if r[2] in ("p", "f"))
-        drives.append(dict(t=team, h=half, a0=a0, a1=a1, w=word, sb=sb, sc=score, tov=tov, xt=xtra, pr=pr,
+        drives.append(dict(t=team, h=half, a0=a0, a1=a1, w=word, sb=sb, sc=score, tov=tov, xt=xtra, pr=pr, kr=kr,
                            q=seq, n=n, y=int(round((end_frac - seq[0][1]) * 100)), r=result))
     for a, b in zip(drives, drives[1:]):                        # close any sliver left by a dropped micro-drive
         if 0 < b["a0"] - a["a1"] <= 90 and not (a["a1"] <= 1800 < b["a0"]): a["a1"] = b["a0"]
