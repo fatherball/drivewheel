@@ -138,7 +138,8 @@ def game_data(g):
                 f_after = max(0.0, min(1.0, (100 - (land + ret)) / 100))
                 # the drive line stops at the snap; the punt's flight is not a drive event,
                 # only the return is drawn, and only in the returning team's color
-                pr = dict(fl=round(f_land, 3), fa=round(f_after, 3), d=clean_desc(last.desc))
+                pen_on = last.penalty_team if (last.penalty == 1 and isinstance(last.penalty_team, str)) else None
+                pr = dict(fl=round(f_land, 3), fa=round(f_after, 3), d=clean_desc(last.desc), pen=pen_on)
         elif result == "Missed field goal": word = "FG miss"
         elif result == "End of half": word = "Half" if half == 1 else "Final"
         elif result == "Safety": end_frac, word, sb = 0.0, "Safety", opp
@@ -175,6 +176,9 @@ def game_data(g):
         n = sum(1 for r in seq if r[2] in ("p", "f"))
         drives.append(dict(t=team, h=half, a0=a0, a1=a1, w=word, sb=sb, sc=score, tov=tov, xt=xtra, pr=pr, kr=kr, kro=kro, kob=kob,
                            q=seq, n=n, y=int(round((end_frac - seq[0][1]) * 100)), r=result))
+    for a, b in zip(drives, drives[1:]):
+        if a.get("pr") and b["t"] != a["t"] and b["q"]:
+            a["pr"]["fa"] = round(1 - b["q"][0][1], 3)           # the spot the receiving team really starts from
     for a, b in zip(drives, drives[1:]):                        # close any sliver left by a dropped micro-drive
         if 0 < b["a0"] - a["a1"] <= 90 and not (a["a1"] <= 1800 < b["a0"]): a["a1"] = b["a0"]
     if not drives: return None
