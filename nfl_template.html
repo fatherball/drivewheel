@@ -42,15 +42,21 @@ select#season{font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;color:
 .menu{display:none;align-items:center;gap:8px}
 .menu .chev{transition:transform .15s;display:inline-block}
 .menu[aria-expanded="true"] .chev{transform:rotate(180deg)}
-.share{margin-left:auto;display:flex;gap:6px;align-items:center}
-.share .lbl{font-family:var(--mono);font-size:.72rem;letter-spacing:.18em;color:var(--chalk-dim);margin-right:2px}
 .wrap{max-width:1900px;margin:0 auto;padding:8px 14px 0}
 .card{background:var(--paper);border-radius:3px;padding:6px 6px 2px;margin-bottom:22px;position:relative}
-.card.split{display:flex;gap:0;align-items:stretch}
+/* The panel sits in the right-hand whitespace, so the wheel keeps the size and position it
+   had without it. Below 1560px there isn't enough margin, so the card falls back to
+   reserving space and the wheel gives ground only then. */
+.card.split{position:relative}
+.card.split .panel{position:absolute;right:6px;top:6px;bottom:6px;width:380px}
+@media (max-width:1680px){
+  .card.split{display:flex;align-items:stretch}
+  .card.split .panel{position:static;width:auto;flex:0 0 340px}
+}
 .card.split .hud{right:406px;flex-direction:column;align-items:flex-start;gap:12px}
 .card.split .save{right:418px}
 .card.split .fit{flex:1 1 auto;min-width:0}
-.sw{display:inline-flex;align-items:center;gap:9px;background:none;border:0;cursor:pointer;padding:6px 4px;
+.sw{margin-left:auto;display:inline-flex;align-items:center;gap:9px;background:none;border:0;cursor:pointer;padding:6px 4px;
   font-size:.8rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--chalk-dim);white-space:nowrap}
 .sw:hover{color:var(--chalk)}
 .sw-track{width:34px;height:18px;border-radius:9px;background:var(--turf);border:1px solid var(--line-2);position:relative;transition:.16s;flex:none}
@@ -59,7 +65,7 @@ select#season{font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;color:
 .sw[aria-checked="true"] .sw-track{background:var(--flag);border-color:var(--flag)}
 .sw[aria-checked="true"] .sw-knob{left:18px;background:#10160F}
 .panel{display:none}
-.card.split .panel{display:flex;flex-direction:column;flex:0 0 380px;border-left:1px solid #DCD9D2;margin:6px 0 6px 10px;padding-left:16px;max-height:calc(100vh - 120px);overflow:hidden;font-family:var(--display)}
+.card.split .panel{display:flex;flex-direction:column;border-left:1px solid #DCD9D2;margin:6px 0 6px 10px;padding-left:16px;max-height:calc(100vh - 120px);overflow:hidden;font-family:var(--display)}
 .panel .ph{padding:2px 0 10px;border-bottom:1px solid #E4E1DA}
 .panel .team{font-size:1.28rem;font-weight:600;letter-spacing:.03em}
 .panel .res{font-family:var(--mono);font-size:.82rem;color:#4A4741;margin-top:3px;letter-spacing:.03em}
@@ -70,7 +76,7 @@ select#season{font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;color:
 .panel .pl.first .dd{color:#1F6B3A;font-weight:500}
 .panel .pl.flag{background:rgba(217,162,0,.09)}
 .panel .empty{color:#8E8B84;font-size:.94rem;padding:22px 0}
-@media (max-width:1100px){ .card.split .panel{flex-basis:320px} }
+@media (max-width:1100px){ .card.split .panel{flex:0 0 310px} }
 @media (max-width:900px){ .card.split{display:block} .card.split .panel{display:none} }
 .save{position:absolute;right:12px;bottom:12px;z-index:5;font-family:var(--display);font-size:.78rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#4A4741;background:rgba(251,250,246,.9);border:1px solid #C4C1BA;border-radius:2px;padding:7px 11px;cursor:pointer}
 .save:hover{border-color:#4A4741;color:#26241F}
@@ -100,7 +106,7 @@ select#season{font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;color:
 .dot:hover{stroke:#080D0B;stroke-width:1.8}
 .tip{position:fixed;pointer-events:none;background:#141B23;color:#F4F6F8;font-size:.98rem;line-height:1.5;padding:13px 16px;border-radius:4px;max-width:430px;box-shadow:0 6px 18px rgba(0,0,0,.35);opacity:0;transition:opacity .1s;z-index:100}
 .tip.on{opacity:1}
-.tip.sheet{max-width:none;font-size:1rem;padding:15px 17px;box-shadow:0 -6px 24px rgba(0,0,0,.45)}
+.tip.sheet{max-width:none;overflow-y:auto;font-size:1rem;padding:15px 17px;box-shadow:0 -6px 24px rgba(0,0,0,.45)}
 .tip b{font-family:var(--display);font-size:1.2rem;font-weight:600;letter-spacing:.02em}
 .tip .k{font-family:var(--mono);font-size:.8rem;color:#AEB8C4;letter-spacing:.04em}
 .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:#12181F;color:#fff;font-family:var(--mono);font-size:.76rem;padding:9px 16px;border-radius:3px;opacity:0;transition:.2s;z-index:120}
@@ -117,8 +123,6 @@ select#season{font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;color:
   .controls.open{display:flex;flex-wrap:wrap;gap:8px;width:100%;padding-top:8px}
   .controls.open select{flex:1 1 44%;min-width:0}
   .controls.open .nav,.controls.open .zoom{flex:0 0 auto}
-  /* the share row reads better under the chart than competing with the picker */
-  .share{margin-left:0;width:100%;justify-content:flex-end;padding:0 2px 18px}
 }
 </style></head>
 <body>
@@ -133,11 +137,6 @@ select#season{font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;color:
     <span class="nav"><button class="btn" id="prev" title="Previous game">‹</button><button class="btn" id="next" title="Next game">›</button></span>
     <span class="zoom"><button class="btn" id="zout" title="Smaller">−</button><button class="btn" id="zin" title="Larger">+</button></span>
     <button class="sw" id="sum" role="switch" aria-checked="false" title="Show a drive summary beside the wheel"><span class="sw-track"><span class="sw-knob"></span></span>Summary</button>
-  </div>
-  <div class="share" id="share">
-    <span class="lbl">SHARE</span>
-    <button class="btn" id="shLink" title="Copy a link to this game">Link</button>
-    <button class="btn" id="shX" title="Share on X">X</button>
   </div>
 </div></div>
 <div class="wrap">
@@ -562,31 +561,46 @@ select#season{font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;color:
   let pinned = false;
   function vv() {                                               // the part of the page actually on screen
     const v = window.visualViewport;
-    return v ? { x: v.offsetLeft, y: v.offsetTop, w: v.width, h: v.height }
-             : { x: 0, y: 0, w: window.innerWidth, h: window.innerHeight };
+    return v ? { x: v.offsetLeft, y: v.offsetTop, w: v.width, h: v.height, s: v.scale || 1 }
+             : { x: 0, y: 0, w: window.innerWidth, h: window.innerHeight, s: 1 };
   }
-  function showTip(html, x, y, pin) {
-    tip.innerHTML = html; tip.classList.add('on'); tip.style.pointerEvents = pin ? 'auto' : 'none';
-    const V = vv();
-    if (window.matchMedia('(max-width: 820px)').matches || V.w < window.innerWidth - 4) {
-      // Zoomed in, a tooltip placed at the tap point often lands outside the window, so on a
-      // phone it docks to the bottom of the screen instead where it is always reachable.
-      // zoomed in: dock it to the bottom of what the reader can actually see
+  let lastTip = null;
+  function placeTip() {
+    if (!lastTip) return;
+    const V = vv(), zoomed = V.s > 1.02 || V.w < window.innerWidth - 4;
+    if (window.matchMedia('(max-width: 820px)').matches || zoomed) {
+      // Pinched in, the whole page is magnified, so a normally-sized panel renders huge and
+      // spills off screen. Counter-scale it and sit it along the bottom of the visible area.
+      const k = V.s;
       tip.classList.add('sheet');
+      tip.style.transformOrigin = '0 0';
+      tip.style.transform = k > 1.02 ? `scale(${(1 / k).toFixed(4)})` : '';
+      tip.style.width = ((V.w - 16) * k) + 'px';
+      tip.style.maxHeight = (V.h * 0.5 * k) + 'px';
       tip.style.left = (V.x + 8) + 'px';
-      tip.style.width = Math.max(220, V.w - 16) + 'px';
-      tip.style.top = ''; tip.style.bottom = '';
-      requestAnimationFrame(() => { tip.style.top = (V.y + V.h - tip.offsetHeight - 8) + 'px'; });
+      tip.style.top = (V.y + V.h - 8 - tip.offsetHeight / k) + 'px';
       return;
     }
     tip.classList.remove('sheet');
-    tip.style.width = '';
+    tip.style.transform = ''; tip.style.width = ''; tip.style.maxHeight = '';
     const pad = 14, tw = tip.offsetWidth, th = tip.offsetHeight;
-    let left = x + pad, top = y + pad;
-    if (left + tw > V.x + V.w - 8) left = Math.max(V.x + 8, x - tw - pad);
-    if (top + th > V.y + V.h - 8) top = Math.max(V.y + 8, y - th - pad);
+    let left = lastTip.x + pad, top = lastTip.y + pad;
+    if (left + tw > V.x + V.w - 8) left = Math.max(V.x + 8, lastTip.x - tw - pad);
+    if (top + th > V.y + V.h - 8) top = Math.max(V.y + 8, lastTip.y - th - pad);
     tip.style.left = left + 'px'; tip.style.top = top + 'px';
   }
+  function showTip(html, x, y, pin) {
+    tip.innerHTML = html; tip.classList.add('on'); tip.style.pointerEvents = pin ? 'auto' : 'none';
+    lastTip = { x, y };
+    placeTip();
+    requestAnimationFrame(placeTip);                             // again once its real height is known
+  }
+  if (window.visualViewport) {                                   // keep it in view as the reader pinches or pans
+    ['resize', 'scroll'].forEach(ev => window.visualViewport.addEventListener(ev, () => {
+      if (tip.classList.contains('on')) placeTip();
+    }));
+  }
+
   const opp2 = (g, t) => t === g.home ? g.away : g.home;
   function wire() {
     const { game, C } = current;
@@ -716,14 +730,7 @@ select#season{font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;color:
   document.getElementById('next').addEventListener('click', () => stepGame(1));
   window.addEventListener('hashchange', () => { const g = GAMES.find(x => x.id === location.hash.slice(1)); if (g && g !== cur) { selSeason.value = g.season; rebuildTeams(); selTeam.value = ''; selWeek.dataset.want = ''; cur = g; rebuild(); } });
 
-  // ---------- share ----------
   const say = m => { toast.textContent = m; toast.classList.add('on'); setTimeout(() => toast.classList.remove('on'), 1800); };
-  const shareURL = () => location.protocol === 'file:' ? location.href : location.origin + location.pathname + '#' + cur.id;
-  const shareText = () => `${ab(cur.away)} ${cur.as_} at ${ab(cur.home)} ${cur.hs}${cur.ot ? ' (OT)' : ''} — one game, one circle.`;
-  document.getElementById('shLink').addEventListener('click', async () => {
-    try { await navigator.clipboard.writeText(shareURL()); say('Link copied'); } catch (e) { say(shareURL()); }
-  });
-  document.getElementById('shX').addEventListener('click', () => window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(shareText()) + '&url=' + encodeURIComponent(shareURL()), '_blank'));
 
   // ---------- drive summary panel ----------
   const panel = document.getElementById('panel'), sumBtn = document.getElementById('sum'),
@@ -841,18 +848,14 @@ select#season{font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;color:
   // above the wheel already names the game. The toggle carries the matchup so it reads as
   // the game picker rather than a generic menu.
   const menu = document.getElementById('menu'), controls = document.getElementById('controls'),
-        menuLabel = document.getElementById('menuLabel'), share = document.getElementById('share'),
-        card = document.querySelector('.card'), mastIn = document.querySelector('.mast-in');
+        menuLabel = document.getElementById('menuLabel');
   menu.addEventListener('click', () => {
     const open = controls.classList.toggle('open');
     menu.setAttribute('aria-expanded', open ? 'true' : 'false');
   });
   const narrow = window.matchMedia('(max-width: 820px)');
   function layoutChrome() {
-    if (narrow.matches) {
-      if (share.parentElement !== card.parentElement) card.parentElement.appendChild(share);
-    } else {
-      if (share.parentElement !== mastIn) mastIn.appendChild(share);
+    if (!narrow.matches) {
       controls.classList.remove('open');
       menu.setAttribute('aria-expanded', 'false');
     }
