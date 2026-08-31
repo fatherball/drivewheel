@@ -6,7 +6,7 @@ regardless of how many seasons of games are behind it.
 Usage: python build_nfl.py [outdir]     (default: site)
 Reads every data*.json in this folder (one per season, from build_data.py).
 """
-import glob, json, os, sys
+import glob, json, os, shutil, sys
 
 MANIFEST_FIELDS = ("id", "wk", "st", "date", "home", "away", "hs", "as_", "ot")
 
@@ -30,6 +30,9 @@ def main(outdir="site"):
 
     with open(os.path.join(outdir, "index.html"), "w") as f:
         f.write(open("nfl_template.html").read())
+
+    if os.path.exists("og-image.png"):                          # the social card, copied through
+        shutil.copyfile("og-image.png", os.path.join(outdir, "og-image.png"))
 
     shell_kb = os.path.getsize(os.path.join(outdir, "index.html")) / 1024
     manifest_kb = os.path.getsize(os.path.join(games_dir, "manifest.json")) / 1024

@@ -58,7 +58,7 @@ def game_data(g):
             koTD = d[(d.play_type == "kickoff") & (d.touchdown == 1) & d.td_team.notna()]
             if not koTD.empty: plays = koTD
         if plays.empty: continue
-        kr = None
+        kr, ko_ret, kob = None, None, None
         ko = d[d.kickoff_attempt == 1]
         if not ko.empty:
             krow = ko.iloc[0]
@@ -68,6 +68,13 @@ def game_data(g):
             # disagreeing is not enough on its own — require a fumble or a recovered onside kick.
             if pd.notna(krow.posteam) and krow.posteam != team and (lost or onside):
                 kr = dict(d=clean_desc(krow.desc), on=onside)
+            if str(krow.penalty_type) == "Kickoff Out of Bounds":
+                kob = clean_desc(krow.desc)                      # flag on the kicking team: ball out near midfield
+            elif (pd.notna(krow.posteam) and krow.posteam == team and krow.touchback != 1
+                  and pd.notna(krow.kick_distance) and pd.notna(krow.yardline_100)
+                  and "OUT OF BOUNDS" not in str(krow.desc).upper()):
+                catch = (100 - krow.yardline_100 - krow.kick_distance) / 100
+                ko_ret = (max(0.0, min(1.0, catch)), clean_desc(krow.desc))
         a0 = drive_start(d, ot_len)
         if a0 is None: continue
         nxt = None
@@ -100,6 +107,10 @@ def game_data(g):
             seq.append([e, frac, kind, down, ydstogo, desc])
         seq.sort(key=lambda r: r[0])
         if not seq: continue
+        kro = None
+        if ko_ret:
+            f_catch, start = ko_ret[0], seq[0][1]                # caught here, drive began there
+            if start - f_catch > 0.005: kro = dict(f0=round(f_catch, 3), f1=round(start, 3), d=ko_ret[1])
 
         last = plays.iloc[-1]
         result = d.fixed_drive_result.iloc[0]
@@ -162,14 +173,18 @@ def game_data(g):
         end_frac = max(0.0, min(1.0, end_frac))
         seq.append([a1, round(end_frac, 3), "x", 0, 0, ""])
         n = sum(1 for r in seq if r[2] in ("p", "f"))
-        drives.append(dict(t=team, h=half, a0=a0, a1=a1, w=word, sb=sb, sc=score, tov=tov, xt=xtra, pr=pr, kr=kr,
+        drives.append(dict(t=team, h=half, a0=a0, a1=a1, w=word, sb=sb, sc=score, tov=tov, xt=xtra, pr=pr, kr=kr, kro=kro, kob=kob,
                            q=seq, n=n, y=int(round((end_frac - seq[0][1]) * 100)), r=result))
     for a, b in zip(drives, drives[1:]):                        # close any sliver left by a dropped micro-drive
         if 0 < b["a0"] - a["a1"] <= 90 and not (a["a1"] <= 1800 < b["a0"]): a["a1"] = b["a0"]
     if not drives: return None
-    k1 = away if drives[0]["t"] == home else home
+    def kicker(rows):                                            # on a kickoff nflfastR files the receiving team as posteam
+        rows = rows[(rows.kickoff_attempt == 1) & rows.defteam.notna()]
+        return rows.iloc[0].defteam if not rows.empty else None
+    k1 = kicker(g) or (away if drives[0]["t"] == home else home)
+    h2rows = g[g.qtr >= 3]
     h2 = [dr for dr in drives if dr["h"] == 2]
-    k2 = (away if h2[0]["t"] == home else home) if h2 else k1
+    k2 = kicker(h2rows) or ((away if h2[0]["t"] == home else home) if h2 else k1)
     top = {}
     for t in (home, away):
         mine = [dr for dr in drives if dr["t"] == t]

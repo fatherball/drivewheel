@@ -3,9 +3,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Drive Wheel · NFL</title>
 <meta name="description" content="Read the game like a clock. Every NFL drive on one circle: angle is the clock, distance is the field.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Drive Wheel · Every NFL game on one circle">
+<meta property="og:description" content="Angle is the clock, distance is the field. Every drive of every game since 2025.">
+<meta property="og:image" content="https://nfl.drivewheel.football/og-image.png">
+<meta property="og:url" content="https://nfl.drivewheel.football/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Drive Wheel · Every NFL game on one circle">
+<meta name="twitter:description" content="Angle is the clock, distance is the field. Every drive of every game since 2025.">
+<meta name="twitter:image" content="https://nfl.drivewheel.football/og-image.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
   --ink:#080D0B; --turf:#0F1815; --turf-2:#16221E; --line:#2E4038; --line-2:#4A6156;
@@ -20,7 +29,7 @@ button,select{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--flag);outline-offset:2px}
 .mast{position:sticky;top:0;z-index:60;background:rgba(8,13,11,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
 .mast-in{max-width:1900px;margin:0 auto;padding:9px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.logo-txt{font-family:var(--display);font-weight:600;font-size:1.35rem;letter-spacing:.06em;text-transform:uppercase;line-height:1;margin-right:4px;white-space:nowrap}
+.logo-txt{font-family:'Big Shoulders Display',Impact,'Arial Narrow',sans-serif;font-weight:700;font-size:1.72rem;letter-spacing:.05em;text-transform:uppercase;line-height:1;margin-right:4px;white-space:nowrap}
 select{appearance:none;-webkit-appearance:none;background:var(--turf);border:1px solid var(--line-2);border-radius:2px;color:var(--chalk);padding:8px 32px 8px 11px;font-size:.94rem;max-width:100%;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23C3CEC8' stroke-width='1.4'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
 select:hover{border-color:var(--chalk-dim)}
@@ -37,6 +46,9 @@ select#season{font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;color:
 .share .lbl{font-family:var(--mono);font-size:.72rem;letter-spacing:.18em;color:var(--chalk-dim);margin-right:2px}
 .wrap{max-width:1900px;margin:0 auto;padding:8px 14px 0}
 .card{background:var(--paper);border-radius:3px;padding:6px 6px 2px;margin-bottom:22px;position:relative}
+.save{position:absolute;right:12px;bottom:12px;z-index:5;font-family:var(--display);font-size:.78rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#4A4741;background:rgba(251,250,246,.9);border:1px solid #C4C1BA;border-radius:2px;padding:7px 11px;cursor:pointer}
+.save:hover{border-color:#4A4741;color:#26241F}
+@media (max-width:820px){ .save{right:8px;bottom:8px} }
 .hud{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:flex-start;gap:20px;padding:12px 16px 0;pointer-events:none}
 .hud .meta{font-family:var(--display);color:#26241F}
 .hud .meta .wk{font-size:1.32rem;font-weight:600;letter-spacing:.06em;line-height:1.2}
@@ -61,6 +73,7 @@ select#season{font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;color:
 .dot:hover{stroke:#080D0B;stroke-width:1.8}
 .tip{position:fixed;pointer-events:none;background:#141B23;color:#F4F6F8;font-size:.98rem;line-height:1.5;padding:13px 16px;border-radius:4px;max-width:430px;box-shadow:0 6px 18px rgba(0,0,0,.35);opacity:0;transition:opacity .1s;z-index:100}
 .tip.on{opacity:1}
+.tip.sheet{left:8px!important;right:8px!important;bottom:8px!important;top:auto!important;max-width:none;width:auto;font-size:1rem;padding:15px 17px;box-shadow:0 -6px 24px rgba(0,0,0,.45)}
 .tip b{font-family:var(--display);font-size:1.2rem;font-weight:600;letter-spacing:.02em}
 .tip .k{font-family:var(--mono);font-size:.8rem;color:#AEB8C4;letter-spacing:.04em}
 .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:#12181F;color:#fff;font-family:var(--mono);font-size:.76rem;padding:9px 16px;border-radius:3px;opacity:0;transition:.2s;z-index:120}
@@ -100,7 +113,7 @@ select#season{font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;color:
   </div>
 </div></div>
 <div class="wrap">
-  <div class="card"><div class="hud" id="hud"></div><div class="fit" id="fit"><div class="loading">Loading season data…</div></div></div>
+  <div class="card"><div class="hud" id="hud"></div><button class="save" id="save" title="Save this wheel as a PNG">Save image</button><div class="fit" id="fit"><div class="loading">Loading season data…</div></div></div>
 </div>
 <div class="foot"><a href="https://drivewheel.football" class="how">How to read the Drive Wheel</a><span>Data: <a href="https://github.com/nflverse/nflverse-data" class="how">nflverse</a></span><span class="rights">© 2026 Eric Mineart</span></div>
 </div>
@@ -258,9 +271,9 @@ select#season{font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;color:
   const labelItems = (reg, away) => {
     const items = [];
     reg.forEach((d, i) => {
-      if (!d.w || d.w === 'Final') return;
+      if (!d.w) return;
       const total = d.sb ? (d.sb === away ? d.sc[0] : d.sc[1]) : null;
-      const txt = d.sb ? `${d.w} ${total}` : d.w;
+      const txt = d.sb ? `${d.w} ${total}` : (d.w === 'Final' ? 'Game' : d.w);
       items.push({ id: i, angle: (deg(d.a0) + deg(d.a1)) / 2, len: txt.length * (d.sb ? 12.4 : 10.4) + 6, txt });
     });
     return layoutLabels(items);
@@ -330,8 +343,19 @@ select#season{font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;color:
     // lead ring
     let pAt = 0, pA = 0, pH = 0;
     const leadSeg = (a0, a1) => { const side = pH > pA ? home : pA > pH ? away : null; if (a1 - a0 > 0.05) w(`<path d="${arcPath(a0, a1, R_LEAD)}" fill="none" stroke="${side ? C[side] : '#C4C1BA'}" stroke-width="4" opacity="${side ? 0.95 : 1}"/>`); };
-    reg.forEach(d => { leadSeg(deg(pAt), deg(d.a1)); pAt = d.a1; pA = d.sc[0]; pH = d.sc[1]; });
+    const flips = [];
+    reg.forEach(d => {
+      const before = pH > pA ? home : pA > pH ? away : null;
+      leadSeg(deg(pAt), deg(d.a1)); pAt = d.a1; pA = d.sc[0]; pH = d.sc[1];
+      const after = pH > pA ? home : pA > pH ? away : null;
+      if (d.sb && after && after !== before) flips.push({ a: deg(d.a1) - 0.2, t: after });
+    });
     leadSeg(deg(pAt), 360);
+    // A short spur ties a scoring band to the lead ring when that score changed who was ahead.
+    flips.forEach(f => {
+      const [x0, y0] = polar(f.a, R_LEAD - 2), [x1, y1] = polar(f.a, R_ARC + 4);
+      w(`<line x1="${f1(x0)}" y1="${f1(y0)}" x2="${f1(x1)}" y2="${f1(y1)}" stroke="${C[f.t]}" stroke-width="2.4"/>`);
+    });
 
     // result bands and labels (with a leader when a label had to step outward)
     reg.forEach(d => {
@@ -400,9 +424,25 @@ select#season{font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;color:
         }
       }
     };
+    const Pw2 = (e, frac) => polar(deg(e), radiusFor(frac));
+    // the return that set the drive up, drawn inward from where the drive line starts
+    reg.concat(ot).forEach(d => {
+      if (!d.kro) return;
+      const P = d.h === 3 ? null : Pw2, e = d.q[0][0];
+      if (!P) return;
+      const [x0, y0] = P(e, d.kro.f0), [x1, y1] = P(e, d.kro.f1);
+      w(`<g class="kret" data-i="${game.drives.indexOf(d)}"><line x1="${f1(x0)}" y1="${f1(y0)}" x2="${f1(x1)}" y2="${f1(y1)}" stroke="transparent" stroke-width="11"/><line x1="${f1(x0)}" y1="${f1(y0)}" x2="${f1(x1)}" y2="${f1(y1)}" stroke="${C[d.t]}" stroke-width="1.4" stroke-dasharray="3 3" opacity="0.75"/><circle cx="${f1(x0)}" cy="${f1(y0)}" r="1.9" fill="none" stroke="${C[d.t]}" stroke-width="1.1"/></g>`);
+    });
     const Pw = (e, frac) => polar(deg(e), radiusFor(frac));
     const AXw = (e) => { const a = (deg(e) - 90) * Math.PI / 180; return [Math.cos(a), Math.sin(a), -Math.sin(a), Math.cos(a)]; };
     reg.forEach(d => drawDrive(d, Pw, game.drives.indexOf(d), AXw));
+    reg.concat(ot).forEach(d => {
+      if (!d.kob || d.h === 3) return;
+      const e = d.q[0][0], f = d.q[0][1], [x, y] = Pw2(e, Math.max(0, f - 0.045));
+      const a = (deg(e) - 90) * Math.PI / 180, ux = Math.cos(a), uy = Math.sin(a), tx = -Math.sin(a), ty = Math.cos(a);
+      const apx = x + ux * 6, apy = y + uy * 6, bx = x - ux * 4, by = y - uy * 4;
+      w(`<polygon class="kob" data-i="${game.drives.indexOf(d)}" points="${f1(apx)},${f1(apy)} ${f1(bx + tx * 5)},${f1(by + ty * 5)} ${f1(bx - tx * 5)},${f1(by - ty * 5)}" fill="${FLAG}" stroke="#8A6A00" stroke-width="0.8" stroke-linejoin="round"/>`);
+    });
     w(`<circle cx="${CX}" cy="${CY}" r="2.2" fill="${INK}"/>`);
     w('</svg>');
     const wheelSvg = o.join('\n');
@@ -460,6 +500,11 @@ select#season{font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;color:
         w(`<text x="${right ? X1 + 20 : X0 - 20}" y="${f1((yt(d.a0) + yt(d.a1)) / 2)}" text-anchor="${right ? 'start' : 'end'}" dominant-baseline="middle" font-family="${FONT_D}" font-size="21" font-weight="600" letter-spacing="0.4" fill="${C[d.sb]}">${esc(d.w)} ${total2}</text>`);
       });
       ot.forEach(d => drawDrive(d, (e, fr) => [xf(d.t, fr), yt(e)], game.drives.indexOf(d), () => [d.t === home ? 1 : -1, 0, 0, 1], true));
+      ot.forEach(d => {                                          // the try after an overtime touchdown
+        if (!d.xt) return;
+        const right = d.t === home, x = right ? X1 - 8 : X0 + 8, yy = yt(d.a1) - 10;
+        w(`<text class="try" data-i="${game.drives.indexOf(d)}" x="${f1(x)}" y="${f1(yy)}" text-anchor="${right ? 'end' : 'start'}" font-family="${FONT_D}" font-size="13" font-weight="600" letter-spacing="0.3" fill="${d.xt.ok ? C[d.t] : '#8E8B84'}" stroke="${PAPER}" stroke-width="3" paint-order="stroke">${d.xt.k}${d.xt.ok ? '' : ' ✕'}</text>`);
+      });
     }
     w('</svg>');
 
@@ -482,10 +527,18 @@ select#season{font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;color:
   let pinned = false;
   function showTip(html, x, y, pin) {
     tip.innerHTML = html; tip.classList.add('on'); tip.style.pointerEvents = pin ? 'auto' : 'none';
+    if (window.matchMedia('(max-width: 820px)').matches) {
+      // Zoomed in, a tooltip placed at the tap point often lands outside the window, so on a
+      // phone it docks to the bottom of the screen instead where it is always reachable.
+      tip.classList.add('sheet');
+      tip.style.left = ''; tip.style.top = '';
+      return;
+    }
+    tip.classList.remove('sheet');
     const pad = 14, tw = tip.offsetWidth, th = tip.offsetHeight;
     let left = x + pad, top = y + pad;
-    if (left + tw > window.innerWidth - 8) left = x - tw - pad;
-    if (top + th > window.innerHeight - 8) top = y - th - pad;
+    if (left + tw > window.innerWidth - 8) left = Math.max(8, x - tw - pad);
+    if (top + th > window.innerHeight - 8) top = Math.max(8, y - th - pad);
     tip.style.left = left + 'px'; tip.style.top = top + 'px';
   }
   const opp2 = (g, t) => t === g.home ? g.away : g.home;
@@ -510,6 +563,18 @@ select#season{font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;color:
       const q = p[0] < 3600 ? `Q${Math.floor(p[0] / 900) + 1} ${mmss(900 - (p[0] % 900))}` : `OT ${mmss(Math.max(0, game.otlen - ((p[0] - 3600) % game.otlen)))}`;
       const dd = p[3] ? `${['', '1ST', '2ND', '3RD', '4TH'][p[3]]} & ${p[4]} · ` : '';
       const html = `<b style="color:${onDark(C[d.t])}">${d.t}</b> <span class="k">${dd}${q} · ${esc(d.r).toUpperCase()}</span><br>${esc(p[5] || '')}`;
+      el.style.cursor = 'pointer';
+      el.addEventListener('click', ev => { ev.stopPropagation(); pinned = true; showTip(html, ev.clientX, ev.clientY, true); });
+    });
+    fit.querySelectorAll('.kob').forEach(el => {
+      const d = game.drives[+el.dataset.i];
+      const html = `<b style="color:${onDark(C[d.t])}">${d.t}</b> <span class="k">KICKOFF OUT OF BOUNDS</span><br>${esc(d.kob || '')}`;
+      el.style.cursor = 'pointer';
+      el.addEventListener('click', ev => { ev.stopPropagation(); pinned = true; showTip(html, ev.clientX, ev.clientY, true); });
+    });
+    fit.querySelectorAll('.kret').forEach(el => {
+      const d = game.drives[+el.dataset.i];
+      const html = `<b style="color:${onDark(C[d.t])}">${d.t}</b> <span class="k">KICKOFF RETURN</span><br>${esc((d.kro && d.kro.d) || '')}`;
       el.style.cursor = 'pointer';
       el.addEventListener('click', ev => { ev.stopPropagation(); pinned = true; showTip(html, ev.clientX, ev.clientY, true); });
     });
@@ -544,7 +609,8 @@ select#season{font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;color:
   const opt = (v, t) => { const o = document.createElement('option'); o.value = v; o.textContent = t; return o; };
   const seasons = [...new Set(GAMES.map(g => g.season))].sort();
   seasons.forEach(sn => selSeason.appendChild(opt(sn, `NFL · ${sn}`)));
-  let cur = GAMES.find(g => g.id === location.hash.slice(1)) || GAMES.find(g => g.id === '2025_17_CHI_SF') || GAMES[0];
+  const newest = GAMES.reduce((a, b) => (b.date > a.date || (b.date === a.date && b.id > a.id)) ? b : a, GAMES[0]);
+  let cur = GAMES.find(g => g.id === location.hash.slice(1)) || newest;   // whatever football happened last
   selSeason.value = cur.season;
   function rebuildTeams() {
     const pool = GAMES.filter(g => g.season === selSeason.value);
@@ -578,6 +644,7 @@ select#season{font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;color:
     cur = g;
     history.replaceState(null, '', '#' + g.id);
     document.title = `${g.away} at ${g.home} · Drive Wheel`;
+    if (window.setMenuLabel) window.setMenuLabel(g);              // keep the collapsed picker in step
     const token = ++showToken;                                  // guards against an earlier fetch landing after a later click
     const spinner = setTimeout(() => { if (token === showToken) fit.innerHTML = '<div class="loading">Loading game…</div>'; }, 150);
     const full = await getFull(g.id);
@@ -604,6 +671,78 @@ select#season{font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;color:
     try { await navigator.clipboard.writeText(shareURL()); say('Link copied'); } catch (e) { say(shareURL()); }
   });
   document.getElementById('shX').addEventListener('click', () => window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(shareText()) + '&url=' + encodeURIComponent(shareURL()), '_blank'));
+
+  // ---------- save the wheel as an image ----------
+  // The header sits in HTML over the canvas, so it has to be redrawn into the SVG for the
+  // export; and webfonts have to be inlined, or the canvas falls back to a system face.
+  let fontCSS = null;
+  async function inlineFonts() {
+    if (fontCSS !== null) return fontCSS;
+    try {
+      const link = document.querySelector('link[href*="fonts.googleapis.com/css2"]');
+      const css = await fetch(link.href).then(r => r.text());
+      const urls = [...css.matchAll(/url\((https:[^)]+\.woff2)\)/g)].map(m => m[1]);
+      const seen = new Map();
+      await Promise.all(urls.map(async u => {
+        if (seen.has(u)) return;
+        const buf = await fetch(u).then(r => r.arrayBuffer());
+        let bin = ''; new Uint8Array(buf).forEach(b => bin += String.fromCharCode(b));
+        seen.set(u, 'data:font/woff2;base64,' + btoa(bin));
+      }));
+      fontCSS = css.replace(/url\((https:[^)]+\.woff2)\)/g, (m, u) => `url(${seen.get(u) || u})`);
+    } catch (e) { fontCSS = ''; }                                // offline or blocked: system fallback
+    return fontCSS;
+  }
+  function exportSVG(game, C) {
+    const src = fit.querySelector('svg');
+    if (!src) return null;
+    const vb = src.getAttribute('viewBox').split(' ').map(Number);
+    const PAD_TOP = 132, PAD_BOT = 54, w = vb[2], h = vb[3] + PAD_TOP + PAD_BOT;
+    const wkName = game.st === 'REG' ? 'Week ' + game.wk : ({19:'Wild card',20:'Divisional',21:'Conference',22:'Super Bowl'}[game.wk] || 'Playoffs');
+    const rows = [[game.away, game.as_], [game.home, game.hs]].map(([t, sc], i) => {
+      const p = game.top && game.top[t] ? game.top[t] : { s: 0, n: 0 }, y = 52 + i * 40;
+      return `<text x="${w - 470}" y="${y}" font-family="${FONT_D}" font-size="27" font-weight="600" fill="${C[t]}">${t}</text>`
+           + `<text x="${w - 346}" y="${y}" text-anchor="end" font-family="${FONT_M}" font-size="30" font-weight="600" fill="${C[t]}">${sc}</text>`
+           + `<text x="${w - 224}" y="${y}" text-anchor="end" font-family="${FONT_M}" font-size="17" fill="${C[t]}">${mmss(p.s)}</text>`
+           + `<text x="${w - 20}" y="${y}" text-anchor="end" font-family="${FONT_M}" font-size="17" fill="${C[t]}">${p.n} drives</text>`;
+    }).join('');
+    const head = `<text x="20" y="44" font-family="${FONT_D}" font-size="21" font-weight="600" letter-spacing="1.2" fill="#26241F">${esc(wkName)} · ${fmtDate(game.date).toUpperCase()}</text>`
+      + (game.stad ? `<text x="20" y="70" font-family="${FONT_D}" font-size="18" fill="#4A4741">${esc(game.stad)}</text>` : '')
+      + rows;
+    const foot = `<text x="20" y="${h - 20}" font-family="${FONT_D}" font-size="17" font-weight="600" letter-spacing="1" fill="#4A4741">DRIVE WHEEL</text>`
+      + `<text x="${w - 20}" y="${h - 20}" text-anchor="end" font-family="${FONT_M}" font-size="15" fill="#6E6B64">nfl.drivewheel.football · data: nflverse</text>`;
+    const inner = src.innerHTML.replace(/^\s*<rect[^>]*fill="#FBFAF6"[^>]*\/?>(<\/rect>)?/, '');
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">`
+      + `<style>__FONTS__</style><rect width="${w}" height="${h}" fill="${PAPER}"/>${head}`
+      + `<g transform="translate(0,${PAD_TOP})">${inner}</g>${foot}</svg>`;
+  }
+  document.getElementById('save').addEventListener('click', async () => {
+    if (!current) return;
+    say('Rendering…');
+    const raw = exportSVG(current.game, current.C);
+    if (!raw) return;
+    const svg = raw.replace('__FONTS__', await inlineFonts());
+    const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }));
+    const img = new Image();
+    img.onload = () => {
+      const scale = 2, cv = document.createElement('canvas');
+      cv.width = img.width * scale; cv.height = img.height * scale;
+      const ctx = cv.getContext('2d');
+      ctx.fillStyle = PAPER; ctx.fillRect(0, 0, cv.width, cv.height);
+      ctx.drawImage(img, 0, 0, cv.width, cv.height);
+      URL.revokeObjectURL(url);
+      cv.toBlob(bl => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(bl);
+        a.download = `drivewheel-${current.game.id}.png`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+        say('Image saved');
+      }, 'image/png');
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); say('Could not render the image'); };
+    img.src = url;
+  });
 
   // ---------- mobile chrome ----------
   // The picker is collapsed by default on a phone: it costs a lot of screen and the block
